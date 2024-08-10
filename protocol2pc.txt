@@ -1,0 +1,70 @@
+Guan Wang(002341590), Dan Luo(002352806), Hind Djebien(002349920)
+wguan22@ubishops.ca, dluo23@ubishops.ca, hdjebien23@ubishops.ca
+
+
+Two-Phase Commit (2PC) Protocol for Bulletin Board Server
+Overview
+This document outlines the two-phase commit (2PC) protocol implemented in the distributed bulletin board server system. The protocol ensures consistency across multiple servers by coordinating write and replace operations, ensuring that all participating servers either commit the changes or abort them in a synchronized manner.
+
+Phase 1: Prepare (PRECOMMIT)
+Initiation:
+
+The primary (coordinator) server receives a write or replace request from a client, it became the master server.
+The coordinator sends a PRECOMMIT message to all connected peer (slave) servers.
+Response:
+
+Each peer server must respond with either SUCCESS if received a PRECOMMIT message unless receiving or sending message failed. After they end this loop to wait next command.
+If no message is received, they are keep recving, if received a ABORT, they print ABORT message and end this loop to wait next command.
+Coordinator Decision:
+
+If the coordinator receives SUCCESS responses from all peers, it proceeds to the commit phase.
+If any peer responds with a timeout occurs while waiting for responses, the coordinator sends an ABORT message to all peers, and the operation is rolled back.
+
+
+Phase 2: Commit (COMMIT) or Abort (ABORT)
+COMMIT Phase:
+
+If all peers responded with SUCCESS during the prepare phase, the coordinator sends a COMMIT message to all peers.
+Peers then make a temp file, perform the write or replace operation locally and respond with a SUCCESS message to the coordinator.
+The coordinator waits for responses from all peers to ensure that the operation has been successfully committed across the system.
+
+ABORT Phase:
+
+If any peer responded with 3.2 ERROR message or a timeout occurred during the prepare phase, the coordinator sends an UNSUCCESS message to all peers.
+Peers then discard any prepared changes and ensure that no partial writes have been made.
+The coordinator notifies the client that the operation was unsuccessful.
+Finalization:
+
+If the coordinator receives SUCCESS responses from all peers after sending the COMMIT message, the operation is finalized, and the bulletin board is updated.
+If peer server received a SUCCESS, it will delete the temp file and finalize the operation.
+If any peer fails to respond with SUCCESS after a COMMIT message, the coordinator takes corrective action, such as retrying the operation or logging an error.
+
+Timeout Mechanism
+Timeouts:
+The coordinator waits for a predefined period for responses during both phases. If a timeout occurs, it defaults to the ABORT or UNSUCCESS action to maintain consistency.
+The peer server waits for a predefined period for responses after sending SUCCESS during COMMIT phase. If a timeout occurs, it defaults to the UNSUCCESS action to maintain consistency.
+
+Logging and Debugging
+All phases of the 2PC protocol are logged for auditing and debugging purposes. Logs include the messages sent and received, as well as timestamps for each operation.
+In DEBUG mode, additional information is printed to help trace the flow of operations and identify potential issues.
+
+Redo Mechanism
+In commit phase, slave server will create a temp file before writing/replacing, then send SUCCESS to coordinator server. If received UNSUCCESS or timeout, it will use the rename function to redo the writing process. It will finish suddenly in case server shutdown in this time.
+If it fails to redo, you can also find the temp file and copy and paste manually.
+If received SUCCESS, process will delete the temp file
+
+Example Workflow
+Write Operation
+Client sends a WRITE request to the coordinator.
+Coordinator sends PRECOMMIT to all peers.
+All peers respond with SUCCESS.
+Coordinator sends COMMIT to all peers.
+Peers perform the write operation and respond with SUCCESS.
+Coordinator acknowledges the client with a successful operation.
+Replace Operation
+Client sends a REPLACE request to the coordinator.
+Coordinator sends PRECOMMIT to all peers.
+A peer fails to prepare and responds with ABORT.
+Coordinator sends ABORT to all peers.
+Peers discard any prepared changes.
+Coordinator notifies the client of the failed operation.

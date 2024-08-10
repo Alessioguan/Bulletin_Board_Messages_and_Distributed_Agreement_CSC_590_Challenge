@@ -1,0 +1,63 @@
+Client server is listening on host 0.0.0.0
+Client server is listening on port 9546
+Internal server is listening on host 0.0.0.0
+Internal server is listening on port 10546
+waiting 10s to build all replica server
+about to replica server loop
+received new server 127.0.0.1 20703
+Received from internal server: Can you hear me, localhost:10546
+Received from internal server: This is 10545
+Connected to peer 0.0.0.0:10545, fd is 7
+Connected to peer 0.0.0.0:10547, fd is 8
+waiting 10s to connect to all other replica server
+received new server 127.0.0.1 48853
+Received from internal server: Can you hear me, localhost:10546
+Received from internal server: This is 10547
+Ready to connect to client
+Received from client: WRITE 11
+sent PRECOMMIT to fd 7, port 10545
+sent PRECOMMIT to fd 8, port 10547
+received SUCCESS for precommit, from 0.0.0.0:10545
+received SUCCESS for precommit, from 0.0.0.0:10547
+precommit success
+sent COMMIT nobody WRITE 11
+ to fd 7, port 10545
+sent COMMIT nobody WRITE 11
+ to fd 8, port 10547
+Received from internal server: PRECOMMIT
+sent SUCCESS for precommit
+Received from internal server: COMMIT nobody WRITE 12
+received COMMIT from master server
+message to write is 12
+message to write is 12
+copy successed!
+In delay mode, 6s to start write operation...
+received SUCCESS for commit
+received SUCCESS for commit
+send SUCCESS for commit
+ready to send
+sent the message SUCCESS
+
+received message: UNSUCCESS
+WRITE UNSUCCESS
+redo writing successed
+Received from client: REPLACE 1/what
+sent PRECOMMIT to fd 7, port 10545
+sent PRECOMMIT to fd 8, port 10547
+received SUCCESS for precommit, from 0.0.0.0:10545
+received SUCCESS for precommit, from 0.0.0.0:10547
+precommit success
+sent COMMIT nobody REPLACE 1/what
+ to fd 7, port 10545
+sent COMMIT nobody REPLACE 1/what
+ to fd 8, port 10547
+received SUCCESS for commit
+received SUCCESS for commit
+Received signal 15, shutting down...
+Debug:Closing inter_server_fd: 4
+replica server accept() error
+: Invalid argument
+server 127.0.0.1:20703 is disconnected
+server 127.0.0.1:48853 is disconnected
+replica_server accept() interrupted, exiting...
+Received signal 1, shutting down...

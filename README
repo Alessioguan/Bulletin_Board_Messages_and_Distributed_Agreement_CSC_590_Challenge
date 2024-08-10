@@ -1,0 +1,305 @@
+Guan Wang(002341590), Dan Luo(002352806), Hind Djebien(002349920)
+wguan22@ubishops.ca, dluo23@ubishops.ca, hdjebien23@ubishops.ca
+
+
+Bulletin Board Messages and Distributed Agreement: A CSC 590 Challenge
+
+##Project Overview
+
+This project is a C-based implementation of a Bulletin Board Server, which facilitates client-server communication to post and retrieve messages. It also supports a distributed environment where multiple servers synchronize the bulletin board data using a two-phase commit protocol. This ensures consistency across all participating servers, even in the event of failures.
+
+##How to test(Important!)
+
+#position
+```bash
+< wguan@linux:~/Fp_bbserv_guan_dan_hind > pwd
+/home/students/wguan/Fp_bbserv_guan_dan_hind
+< wguan@linux:~/Fp_bbserv_guan_dan_hind > ls
+Fp_test_no_peer  Fp_test_peer1  Fp_test_peer2  Fp_test_peer3
+```
+I updated 4 folders to convenient your test, each fold including same code content but only different config file which:
+Fp_test_no_peer don't have peer information in config file, it is used for single server test
+Fp_test_peer1  Fp_test_peer2  Fp_test_peer3 have peer information in config file, it is used for multiple servers synchronization test
+
+#Make file
+```bash
+< wguan@linux:~/fp_test > make clean
+< wguan@linux:~/fp_test > make
+```
+
+# Starting the Server
+```bash
+< wguan@linux:~/fp_test > ./bbserv
+```
+attention: only the command ./bbserv could be accept, we don't accept any other additional argument in the command
+
+# Config file
+The only way to modify the config information is edit in config file
+the default parameters are:
+
+THMAX 6
+BBPORT 9000
+SYNCPORT 10000
+BB_FILE bbfile
+DAEMON true
+DEBUG false
+DELAY false
+
+Please edit the second token
+if you want to add peer, there are the example:
+PEER localhost:10546
+PEER 0.0.0.0:10547
+
+server will give you the prompt if your edit is not correct and replaced by default value
+
+# bbfile
+The size of bbfile to write and replace I set is 300*1024 byte, which I assume that the max line is 300 and each line cannot exist 1024 bytes.
+
+# Single server test
+Open folder Fp_test_no_peer and start the server, client input the port number to connect to it
+It will only setup file server
+```bash
+< wguan@linux:Fp_bbserv_guan_dan_hind/Fp_test_no_peer > telnet localhost 9000
+```
+
+Maximum connected client depends on THMAX number, if connecting clients is more than that, new client will connect only if old client disconnect.
+Input USER, READ, WRITE, REPLACE and QUIT command to test
+
+example:
+```bash
+< wguan@linux:Fp_bbserv_guan_dan_hind/Fp_test_no_peer > telnet localhost 9000
+Trying ::1...
+Connection failed: Connection refused
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+0.0 Welcome to the Bulletin Board Server
+Input 'USER name' to set your user name, user name only accept alphabet letter and numbers
+Input 'READ messagenumber' to read the message, the message number are from 1 to 10
+Input 'WRITE message' to add new message
+Input 'REPLACE message-number/message' to replace the message
+Input 'QUIT' to exit
+READ 1
+2.0 1 nobody/alice:Welcome to the bulletin board system!
+USER guan
+1.0 HELLO guan Your user name is established
+WRITE bbserv is perfect!
+3.0 WROTE 11
+REPLACE 1/you can write anything you want
+3.0 WROTE 1
+READ 1
+2.0 1 guan/guan:you can write anything you want
+READ 11
+2.0 11 guan/guan:bbserv is perfect!
+QUIT
+4.0 BYE welcome to Bulletin Board Server again!!
+Connection closed by foreign host.
+```
+
+
+# multiple server test
+
+Use tmux to open three panes to start 3 server.
+Open the folders Fp_test_peer1  Fp_test_peer2  Fp_test_peer3, you can make and start the server directly because I have prepared the config file information
+Important: Open three servers in 10 second, because I only give 10 second to connect each others:
+```bash
+< wguan@linux:Fp_bbserv_guan_dan_hind/Fp_test_peer1 > ./bbserv
+< wguan@linux:Fp_bbserv_guan_dan_hind/Fp_test_peer2 > ./bbserv
+< wguan@linux:Fp_bbserv_guan_dan_hind/Fp_test_peer3 > ./bbserv
+```
+
+It will setup file server and replica server
+wait 20s until see 'Ready to connect to client' on both server, because I gave 10s for each server to start the replica server and 10s to connect each others
+then you can continue your test
+
+attention: USER READ QUIT only work for file server, WRITE REPLACE will work for replica server for synchronization
+
+You can WRITE/REPLACE in for one server, and check if it could be succeed READ in other server.
+
+
+# SIGNAL test
+SIGHUP signal works only for non daemon server
+SIGTERM,SIGINT,SIGQUIT works for both deamon and no daemon server
+
+In multiple peers mode, if one server disconnect, other server will restart(get SIGHUP signal) immediately, to try to connect each other again
+
+
+# daemon mode
+in config file: daemon true or daemon false
+default mode is deamon mode, you can also modify to no daemon mode
+in daemon mode, see bbserv.log find the server information and see bbserv.pid to see the server pid
+
+
+# debug mode
+in config file: debug true or debug false
+default mode is no debug mode, you can also modify to debug mode
+in debug mode, you can find more information like: error reasons, connected customers, details of inter server communication etc.
+
+
+# delay mode
+in config file: delay true or delay false
+default mode is no delay mode, you can also modify to no delay mode
+In delay mode, you can check the concurrency of file editing, 3s delay for reading and 6s delay for writing/replacing.
+For multi servers mode, delaying for writing/replacing will effect in both master and slave server, totally 12 seconds.
+
+Single server test in delay mode: 
+If one client READ first of other client, when others READ/WRITE/REPLACE in 3s, they will wait 3s to continue
+If one client WRITE first of other client, when others READ/WRITE/REPLACE in 6s, they will wait 3s to continue
+
+Multi server test(all open delay mode) in delay mode:
+If one client WRITE/REPLACE first to server A, when others READ in server B in 12s, they will wait 12s to continue, after they can read
+Important!!!
+Don't WRITE/REPLACE in different servers in the same time in delay mode, because I set 6s dalay for slave server and 6s delay for master server and I gived 16s limit in recv_nonblock function, if you write in same time in delay mode will delay to write in the same time cause the timeout, it also cause synchronization fail!
+
+
+###File Structure
+
+#server.c:
+This file implements the main server logic for a distributed bulletin board system. It includes two main servers: client server managed by a thread pool and inter-server communication server using multiple threads.
+Important functions include signal handling, replica server handling (for accepting connections from peer servers), inter-server response logic(what slave server operate and respond), peer server connection management, and daemonization.
+
+#fserv.h / fserv.c:
+Implements all server-side file operations and synchronization mechanisms for handling client requests, particularly for read, write, and replace commands. It also manages inter-server synchronization in WRITE/REPLACE algorithm(on the master server side).
+
+#threadpool.c / threadpool.h:
+These files implement a thread pool to manage multiple concurrent client connections efficiently. The thread pool allows the server to preallocate a fixed number of threads to handle client requests.
+
+#config.c / config.h:
+Manages server configuration settings, check value from config file and load default value if it need.
+
+#tcp-utils.c / tcp-utils.h: 
+Provides utility functions for TCP/IP communication, such as setting up sockets, handling connections, and sending/receiving data over the network; Provided by Professor Bruda.
+
+#tokenize.c / tokenize.h:
+Implements functions for parsing and tokenizing input strings, which is used to process client commands; Provided by Professor Bruda.
+
+
+###Features
+#Phase 1: Bulletin Board Server
+Client-Server Communication: The server communicates with clients over a TCP/IP network using a predefined application protocol. Clients can send commands to post username, read, write, replace, or quit messages on the bulletin board.
+
+Concurrency Management: The server supports concurrent connections using a thread pool. Multiple clients can interact with the server simultaneously without blocking each other.
+
+Bulletin Board File: Messages are stored in a text file (bbfile), where each message is identified by a unique number and associated with the client who posted it. The server ensures robust file handling, preventing data loss even during unexpected shutdowns.
+
+Startup and Reconfiguration: The server can be configured to run as a Unix daemon, handling signal-based startup and shutdown procedures. Configuration is handled through a configuration file.
+
+#Phase 2: Data Replication
+Two-Phase Commit Protocol: The server uses a two-phase commit protocol to synchronize the bulletin board file across multiple servers. This ensures that all participating servers have consistent data.
+
+Synchronization: On receiving a write or replace command, the server initiates synchronization with other servers. The protocol ensures that either all servers commit the data, or none do, maintaining data integrity.
+
+#Rubust:There are corresponding processing for various possible errors. The server is not easily terminated due to external factors or erroneous instructions. Even if the server terminates unexpectedly, the data security of bbfile and the accuracy of synchronization can be guaranteed.
+
+
+
+###Detailed Feature/code exhibition
+
+#Peer connection(server.c line 127 - 156):
+Setup replica server by multithread management, after wait 10s, then connect all the peers, after wait 10s
+give 10s of all the server to setup relica server, then give 10s for them to connect eachothers
+
+
+#Block avoiding:
+client server(fserv.c line 80): server use recv_nonblock() function, every 3s check whether it comes pool shutdown signal(conditional variable)
+replica server (server.c *replica_server() in line 449): Use Ctrl+C (SIGINT) or input 'kill -SIGHUP pid' on terminal, see accept() on replica server is unblock, which we can ensure the replica server management thread are closed
+code(server.c *replica_server() in line 449):
+...
+while (1) {
+
+        // Accept connection unless beyond the concurrency limit:
+        ssock = accept(inter_server_fd, (struct sockaddr *) &client_addr, &client_addr_len);
+
+        if (ssock < 0) {
+            perror("replica server accept() error\n");
+            // Check here whether errno is an error caused by the file descriptor being closed
+            if (errno == EBADF || errno == EINTR || errno == EINVAL) {
+                // Handle invalid file descriptors or interrupted system calls, end the thread
+                printf("replica_server accept() interrupted, exiting...\n");
+                break;
+            }
+            printf("fail to connect to %s:%d\n", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+            continue;
+
+        }
+	...
+}
+    //if inter server socket is closed, end this thread
+    pthread_exit(NULL);
+    return 0; // will never reach this anyway...
+...
+
+after received signal SIGINT and SIGHUP:
+
+^CReceived signal 2, shutting down...
+Closing server_client_fd: 3
+Closing inter_server_fd: 4
+replica server accept() error
+: Invalid argument
+replica_server accept() interrupted, exiting...
+Exiting server...
+Received signal 1, shutting down...
+Closing server_client_fd: 3
+Closing inter_server_fd: 4
+Reloading configuration and restarting server...
+replica server accept() error
+: Invalid argument
+replica_server accept() interrupted, exiting...
+
+
+#redo WRITE/REPLACE if fail in phase 2 of synchronization(server.c replica_client() line 508)
+before redo, I have create the temp file and write/replace the bbfile
+If it needs redo, I just use rename() temp file to bbfile, it is very easy and quick. It reduce the risk that bbfile lost or fail to redo if server unexpected disconnection happend. It increase the stability of synchronization because if master server fail to write/replace, the slave server redo immediately.
+
+If the server disconnect before redo, we can also find the temp file to redo the bbfile manually
+
+give the temp file name randomly, in case multi master server send the write/replace request in same time.
+char temp_file_template[] = "temp_bbfile_XXXXXX";//template file name
+int temp_fd = mkstemp(temp_file_template);
+
+
+#inter server disconnect:
+When first disconnecting happened, lock the thread and give SIGHUP signal to restart server. Since restart the server, one server disconnecting will cause every server restart. Set the mutex and variable to avoid receive multi SIGHUP during restart
+I use restart during disconnect for two reason:
+1. if a server restart, it can not lose the connection with other servers because they all restart together in a short time.
+2. Avoid other server shutdown 
+
+server.c(line 939)
+
+void *replica_client(void *args){
+...
+	}
+    close(clnt->fd);
+    free(clnt);
+    pthread_mutex_lock(&restart_mutex);
+    if (!restart_in_progress) {
+        restart_in_progress = true;
+        pthread_mutex_unlock(&restart_mutex);
+
+        kill(getpid(), SIGHUP);// if one server is disconnected, restart all the server
+    } else {
+        pthread_mutex_unlock(&restart_mutex);
+    }
+    return NULL;
+}
+
+server.c(line 333)
+if (signum == SIGHUP) {
+...
+        printf("Ready to connect to client\n");
+
+        pthread_mutex_lock(&restart_mutex);
+        restart_in_progress = false;// Shielding SIGHUP signal after completely restart
+        pthread_mutex_unlock(&restart_mutex);
+}
+
+
+#print message in two phase
+Since there are many send/receive message in two phase synchronization, I add many pritable massege during send and receive, to note the step of inter server communicating. It will be more detailly in debug mode. if communication failed, we can find the fail part easily by reading the server interface.
+
+
+#there still many details of this project, you can find it in the code
+
+###Other document
+The protocol for the two-phase commit process is documented in protocol2pc.txt.
+Additional comments are provided within the code to explain non-obvious implementation details and algorithms used.

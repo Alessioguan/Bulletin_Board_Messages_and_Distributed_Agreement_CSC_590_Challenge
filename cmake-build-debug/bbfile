@@ -1,0 +1,11 @@
+This is Bulletin Board file
+1 alice Welcome to the bulletin board system!
+2 bob Hi Alice, glad to be here.
+3 charlie Hello everyone, this is Charlie.
+4 dave Does anyone know how to configure the server settings?
+5 alice @dave Yes, you can refer to the server manual in the documentation.
+6 bob Anyone interested in a coding challenge this weekend?
+7 charlie @bob I'm in! What are the details?
+8 dave @bob Count me in as well.
+9 alice @bob Sounds fun! Let’s do it.
+10 eve Hi all, I’m new here. Nice to meet you!
